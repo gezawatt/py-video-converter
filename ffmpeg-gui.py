@@ -34,6 +34,14 @@ class FFmpegConverterApp:
         self.select_button = tk.Button(root, text="Выбрать файлы", command=self.select_files)
         self.select_button.pack(pady=5)
 
+        # Audio stream input
+        self.audio_stream_label = tk.Label(root, text="Номер аудиодорожки\n(оставьте пустым, чтобы использовать стандартную):")
+        self.audio_stream_label.pack(pady=5)
+
+        self.audio_stream_entry = tk.Entry(root)
+        self.audio_stream_entry.insert(0, "")  # Default: no audio
+        self.audio_stream_entry.pack(pady=5)
+
         # Output folder warning
         self.output_dir_warning = tk.Label(root, text="Выходная папка не выбрана!", fg="red")
         self.output_dir_warning.pack(pady=2)
@@ -101,15 +109,22 @@ class FFmpegConverterApp:
         params["bitrate"] = bitrate
         return params
 
-    def convert_file(self, input_path, output_path, ffmpeg_params):
+    def convert_file(self, input_path, output_path, ffmpeg_params, audio_stream_index):
         try:
             cmd = [
                 'ffmpeg',
                 '-i', input_path,
                 '-c:v', ffmpeg_params["video_codec"],
                 '-b:v', ffmpeg_params["bitrate"],
-                output_path
             ]
+
+            # Add audio processing if stream index is provided
+            if audio_stream_index.strip():
+                cmd += [
+                    '-map', f'0:a:{audio_stream_index}'  # Map selected audio stream
+                ]
+
+            cmd += [output_path]
 
             self.log(f"Running command: {' '.join(cmd)}\n")
 
@@ -144,6 +159,7 @@ class FFmpegConverterApp:
     def conversion_thread(self):
         bitrate = self.bitrate_entry.get().strip()
         selected_format = self.output_format_var.get()
+        audio_stream_index = self.audio_stream_entry.get().strip()  # Get audio stream index
 
         if not bitrate:
             messagebox.showwarning("Внимание", "Введите битрейт.")
@@ -165,7 +181,7 @@ class FFmpegConverterApp:
 
             self.status_label.config(text=f"Конвертируется: {os.path.basename(path)}")
             self.log(f"=== Конвертация {os.path.basename(path)} ===\n")
-            self.convert_file(path, output_path, ffmpeg_params)
+            self.convert_file(path, output_path, ffmpeg_params, audio_stream_index)
 
         self.status_label.config(text="Конвертация завершена.")
         self.log("=== Конвертация завершена ===\n")
