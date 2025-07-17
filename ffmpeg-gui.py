@@ -67,7 +67,14 @@ class FFmpegConverterApp:
         self.convert_button.pack(pady=10)
 
         self.status_label = tk.Label(root, text="", fg="green")
-        self.status_label.pack(pady=5)
+
+        # Button to show audio tracks
+        self.show_audio_button = tk.Button(
+            root,
+            text="Показать аудиодорожки",
+            command=self.show_audio_tracks
+        )
+        self.show_audio_button.pack(pady=5)
 
         # Console output
         self.console = tk.Text(root, height=10, wrap='word', state='disabled', bg='black', fg='white')
@@ -85,6 +92,48 @@ class FFmpegConverterApp:
             self.file_paths = list(files)
             self.files_label.config(text="\n".join(self.file_paths))
             self.status_label.config(text="Файлы выбраны.")
+
+    def show_audio_tracks(self):
+        filetypes = (("Video files", "*.mp4 *.avi *.mkv *.mov *.flv"), ("All files", "*.*"))
+        filepath = filedialog.askopenfilename(title="Выберите файл для просмотра аудиодорожек", filetypes=filetypes)
+        if not filepath:
+            return
+
+        # Run ffprobe to get audio streams
+        cmd = [
+            'ffprobe',
+            '-v', 'quiet',
+            '-print_format', 'json',
+            '-show_streams',
+            '-show_format',
+            filepath
+        ]
+
+        try:
+            result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            info = result.stdout
+            data = eval(info)  # Safely parse JSON later if needed
+
+            streams = data.get('streams', [])
+            audio_streams = [s for s in streams if s.get('codec_type') == 'audio']
+
+            if not audio_streams:
+                messagebox.showinfo("Аудиодорожки", "В выбранном файле нет аудиодорожек.")
+                return
+
+            msg = "Доступные аудиодорожки:\n\n"
+            for idx, stream in enumerate(audio_streams):
+                codec = stream.get('codec_name', 'unknown')
+                lang = stream.get('tags', {}).get('language', 'und')
+                title = stream.get('tags', {}).get('title', f'Аудиодорожка {idx}')
+                msg += f"Дорожка {idx}: {title} ({lang}), кодек: {codec}\n"
+
+            # Show in message box
+            messagebox.showinfo("Аудиодорожки", msg)
+            self.log(msg)
+            
+        except Exception as e:
+            messagebox.showerror("Ошибка", f"Не удалось получить информацию об аудио:\n{e}")
 
     def select_output_dir(self):
         directory = filedialog.askdirectory(title="Выберите выходную папку")
