@@ -204,16 +204,23 @@ class FFmpegConverterApp:
 
             process.wait()
             if process.returncode != 0:
-                self.log(f"Error during conversion of {input_path}\n")
+                self.log(f"Error during conversion of {input_path}\n", "red")
 
         except Exception as e:
             self.log(f"Exception: {e}\n")
             messagebox.showerror("Ошибка", f"Ошибка при конвертации файла:\n{input_path}\n{e}")
 
-    def log(self, message):
+    def log(self, message, color="white"):
         def append():
             self.console.config(state='normal')
-            self.console.insert(tk.END, message)
+            # Define tags if not already defined
+            if not hasattr(self, '_log_tags_initialized'):
+                self.console.tag_configure("green", foreground="green")
+                self.console.tag_configure("red", foreground="red")
+                self.console.tag_configure("white", foreground="white")
+                self._log_tags_initialized = True
+            # Insert message with the specified color tag
+            self.console.insert(tk.END, message, (color,))
             self.console.config(state='disabled')
             self.console.see(tk.END)
         self.root.after(0, append)
