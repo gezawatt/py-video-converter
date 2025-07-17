@@ -66,8 +66,6 @@ class FFmpegConverterApp:
         self.convert_button = tk.Button(root, text="Начать конвертацию", command=self.start_conversion)
         self.convert_button.pack(pady=10)
 
-        self.status_label = tk.Label(root, text="", fg="green")
-
         # Button to show audio tracks
         self.show_audio_button = tk.Button(
             root,
@@ -84,6 +82,10 @@ class FFmpegConverterApp:
         scrollbar = tk.Scrollbar(self.console, command=self.console.yview)
         scrollbar.pack(side='right', fill='y')
         self.console.config(yscrollcommand=scrollbar.set)
+
+        # Status bar
+        self.status_label = tk.Label(root, text="Выберите файлы", fg="green")
+        self.status_label.pack(pady=5)
 
     def select_files(self):
         filetypes = (("Video files", "*.mp4 *.avi *.mkv *.mov *.flv"), ("All files", "*.*"))
@@ -110,7 +112,15 @@ class FFmpegConverterApp:
         ]
 
         try:
-            result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            result = subprocess.run(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                encoding='utf-8',
+                errors='replace'  # or 'ignore'
+                )
+            
             info = result.stdout
             data = eval(info)  # Safely parse JSON later if needed
 
@@ -121,7 +131,7 @@ class FFmpegConverterApp:
                 messagebox.showinfo("Аудиодорожки", "В выбранном файле нет аудиодорожек.")
                 return
 
-            msg = "Доступные аудиодорожки:\n\n"
+            msg = "Доступные аудиодорожки:\n"
             for idx, stream in enumerate(audio_streams):
                 codec = stream.get('codec_name', 'unknown')
                 lang = stream.get('tags', {}).get('language', 'und')
@@ -130,7 +140,7 @@ class FFmpegConverterApp:
 
             # Show in message box
             messagebox.showinfo("Аудиодорожки", msg)
-            self.log(msg)
+            self.log(msg + "\n")
             
         except Exception as e:
             messagebox.showerror("Ошибка", f"Не удалось получить информацию об аудио:\n{e}")
@@ -182,7 +192,10 @@ class FFmpegConverterApp:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 universal_newlines=True,
-                bufsize=1
+                bufsize=1,
+                text=True,
+                encoding='utf-8',
+                errors='replace'
             )
 
             if process.stdout:
