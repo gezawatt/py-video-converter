@@ -10,7 +10,7 @@ class FFmpegConverterApp:
     def __init__(self, root):
         self.root = root
         self.root.title("FFmpeg Video Converter")
-        self.root.geometry("500x400")
+        self.root.geometry("1000x650")
 
         # Input files
         self.file_paths = []
@@ -53,7 +53,16 @@ class FFmpegConverterApp:
         self.convert_button.pack(pady=10)
 
         self.status_label = tk.Label(root, text="", fg="green")
-        self.status_label.pack(pady=10)
+        self.status_label.pack(pady=5)
+
+        # Console output
+        self.console = tk.Text(root, height=10, wrap='word', state='disabled', bg='black', fg='white')
+        self.console.pack(padx=10, pady=10, fill='both', expand=True)
+
+        # Scrollbar for console
+        scrollbar = tk.Scrollbar(self.console, command=self.console.yview)
+        scrollbar.pack(side='right', fill='y')
+        self.console.config(yscrollcommand=scrollbar.set)
 
     def select_files(self):
         filetypes = (("Video files", "*.mp4 *.avi *.mkv *.mov *.flv"), ("All files", "*.*"))
@@ -96,9 +105,34 @@ class FFmpegConverterApp:
                 output_path
             ]
 
-            subprocess.run(cmd, check=True)
-        except subprocess.CalledProcessError as e:
+            self.log(f"Running command: {' '.join(cmd)}\n")
+
+            process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                universal_newlines=True,
+                bufsize=1
+            )
+
+            for line in process.stdout:
+                self.log(line)
+
+            process.wait()
+            if process.returncode != 0:
+                self.log(f"Error during conversion of {input_path}\n")
+
+        except Exception as e:
+            self.log(f"Exception: {e}\n")
             messagebox.showerror("Ошибка", f"Ошибка при конвертации файла:\n{input_path}\n{e}")
+
+    def log(self, message):
+        def append():
+            self.console.config(state='normal')
+            self.console.insert(tk.END, message)
+            self.console.config(state='disabled')
+            self.console.see(tk.END)
+        self.root.after(0, append)
 
     def conversion_thread(self):
         bitrate = self.bitrate_entry.get().strip()
@@ -123,9 +157,11 @@ class FFmpegConverterApp:
                 output_path = os.path.join(os.path.dirname(path), filename)
 
             self.status_label.config(text=f"Конвертируется: {os.path.basename(path)}")
+            self.log(f"=== Конвертация {os.path.basename(path)} ===\n")
             self.convert_file(path, output_path, ffmpeg_params)
 
         self.status_label.config(text="Конвертация завершена.")
+        self.log("=== Конвертация завершена ===\n")
         self.open_output_folder()
 
     def start_conversion(self):
