@@ -27,16 +27,22 @@ class FFmpegConverterApp:
         self.output_format_var = tk.StringVar(value=self.output_format_options[3])  # default
 
         # Widgets
-        self.select_button = tk.Button(root, text="Выбрать файлы", command=self.select_files)
-        self.select_button.pack(pady=5)
 
         self.files_label = tk.Label(root, text="Файлы не выбраны", justify="left")
         self.files_label.pack(pady=5)
 
+        self.select_button = tk.Button(root, text="Выбрать файлы", command=self.select_files)
+        self.select_button.pack(pady=5)
+
+        # Output folder warning
+        self.output_dir_warning = tk.Label(root, text="Выходная папка не выбрана!", fg="red")
+        self.output_dir_warning.pack(pady=2)
+        self.output_dir_warning_visible = True
+
         self.output_button = tk.Button(root, text="Выбрать выходную папку", command=self.select_output_dir)
         self.output_button.pack(pady=5)
 
-        self.format_label = tk.Label(root, text="Выберите выходной формат:")
+        self.format_label = tk.Label(root, text="Выходной формат:")
         self.format_label.pack(pady=5)
 
         self.format_menu = tk.OptionMenu(root, self.output_format_var, *self.output_format_options)
@@ -76,7 +82,7 @@ class FFmpegConverterApp:
         directory = filedialog.askdirectory(title="Выберите выходную папку")
         if directory:
             self.output_dir = directory
-            messagebox.showinfo("Папка выбрана", f"Файлы будут сохранены в:\n{self.output_dir}")
+            self.output_dir_warning.config(text="Выходная папка: " + self.output_dir, fg="green")
 
     def get_ffmpeg_params(self, selected_format, bitrate):
         params = {}
@@ -115,8 +121,9 @@ class FFmpegConverterApp:
                 bufsize=1
             )
 
-            for line in process.stdout:
-                self.log(line)
+            if process.stdout:
+                for line in process.stdout:
+                    self.log(line)
 
             process.wait()
             if process.returncode != 0:
