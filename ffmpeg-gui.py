@@ -60,7 +60,7 @@ class FFmpegConverterApp:
         self.bitrate_label.pack(pady=5)
 
         self.bitrate_entry = tk.Entry(root)
-        self.bitrate_entry.insert(0, "620k")
+        self.bitrate_entry.insert(0, "650k")
         self.bitrate_entry.pack(pady=5)
 
         self.convert_button = tk.Button(root, text="Начать конвертацию", command=self.start_conversion)
@@ -281,3 +281,4 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = FFmpegConverterApp(root)
     root.mainloop()
+    
