@@ -177,11 +177,14 @@ class FFmpegConverterApp:
                 '-b:v', ffmpeg_params["bitrate"],
             ]
 
-            # Add audio processing if stream index is provided
-            if audio_stream_index.strip():
+            if audio_stream_index is not None:
+                # Map ALL video streams and ONE specific audio stream
                 cmd += [
-                    '-map', f'0:a:{audio_stream_index}'  # Map selected audio stream
+                    '-map', '0:v',          # All video streams
+                    '-map', f'0:a:{audio_stream_index}'  # Specific audio stream
                 ]
+            # If audio_stream_index is None, omit -map → FFmpeg uses default stream selection
+            # (which typically includes all video streams and the default audio)
 
             cmd += [output_path]
 
@@ -208,7 +211,7 @@ class FFmpegConverterApp:
 
         except Exception as e:
             self.log(f"Exception: {e}\n")
-            messagebox.showerror("Ошибка", f"Ошибка при конвертации файла:\n{input_path}\n{e}")
+            self.root.after(0, lambda: messagebox.showerror("Ошибка", f"Ошибка при конвертации файла:\n{input_path}\n{e}"))
 
     def log(self, message, color="white"):
         def append():
@@ -228,15 +231,29 @@ class FFmpegConverterApp:
     def conversion_thread(self):
         bitrate = self.bitrate_entry.get().strip()
         selected_format = self.output_format_var.get()
-        audio_stream_index = self.audio_stream_entry.get().strip()  # Get audio stream index
+        audio_stream_input = self.audio_stream_entry.get().strip()
 
         if not bitrate:
-            messagebox.showwarning("Внимание", "Введите битрейт.")
+            self.root.after(0, lambda: messagebox.showwarning("Внимание", "Введите битрейт."))
             return
 
         if not self.file_paths:
-            messagebox.showwarning("Внимание", "Сначала выберите файлы.")
+            self.root.after(0, lambda: messagebox.showwarning("Внимание", "Сначала выберите файлы."))
             return
+
+        # Validate audio stream index only if provided
+        audio_stream_index = None  # None means "use default"
+        if audio_stream_input:
+            try:
+                idx = int(audio_stream_input)
+                if idx < 0:
+                    raise ValueError("Индекс аудиодорожки не может быть отрицательным.")
+                audio_stream_index = idx
+            except ValueError as e:
+                error_msg = f"Неверное значение аудиодорожки: '{audio_stream_input}'.\nДолжно быть целое неотрицательное число (например: 0, 1, 2) или оставить пустым для стандартной дорожки."
+                self.root.after(0, lambda msg=error_msg: messagebox.showerror("Ошибка", msg))
+                self.log(f"Ошибка: {error_msg}\n", "red")
+                return
 
         ffmpeg_params = self.get_ffmpeg_params(selected_format, bitrate)
 
